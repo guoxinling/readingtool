@@ -1,230 +1,48 @@
-const categories = [
-  { id: 'official', label: '官方资源', icon: '📘', desc: '官方文档、仓库、第一手入口', accent: '#1e4ed8', soft: '#dbe7ff' },
-  { id: 'deploy', label: '部署教程', icon: '☁️', desc: '云部署与服务器上线指南', accent: '#0f766e', soft: '#d6f3ef' },
-  { id: 'getting-started', label: '入门教程', icon: '🚀', desc: '新手从零到可用的步骤', accent: '#b45309', soft: '#ffe7c4' },
-  { id: 'channel', label: '平台接入', icon: '🔌', desc: '飞书/钉钉/Telegram 等渠道', accent: '#0b7285', soft: '#d8f2f8' },
-  { id: 'skills', label: '技能开发', icon: '🧩', desc: '技能编写、发布与调试', accent: '#92400e', soft: '#ffeac2' },
-  { id: 'video', label: '视频内容', icon: '🎬', desc: '可视化教程与案例演示', accent: '#b42318', soft: '#ffe0dc' },
-  { id: 'case', label: '案例实战', icon: '💡', desc: '自动化场景和落地经验', accent: '#14532d', soft: '#d9f6df' },
-  { id: 'tools', label: '工具生态', icon: '🛠️', desc: '插件、辅助工具与社区项目', accent: '#115e59', soft: '#d4f8f4' }
-];
-
-const resources = [
-  {
-    title: 'OpenClaw 官方文档',
-    desc: '安装、配置、API 与最佳实践的完整入口。',
-    url: 'https://docs.openclaw.ai',
-    source: 'OpenClaw',
-    lang: 'en',
-    category: 'official',
-    featured: true,
-    tags: ['文档', '必读']
-  },
-  {
-    title: 'OpenClaw GitHub 主仓库',
-    desc: '源码、Issue、版本发布与社区讨论。',
-    url: 'https://github.com/openclaw/openclaw',
-    source: 'GitHub',
-    lang: 'en',
-    category: 'official',
-    featured: true,
-    tags: ['源码', '更新']
-  },
-  {
-    title: 'ClawHub Skills 市场',
-    desc: '浏览与安装社区技能，快速扩展助手能力。',
-    url: 'https://clawhub.com',
-    source: 'ClawHub',
-    lang: 'en',
-    category: 'official',
-    featured: true,
-    tags: ['技能', '市场']
-  },
-  {
-    title: 'DigitalOcean 一键部署 OpenClaw',
-    desc: '通过一键模板快速完成云端部署。',
-    url: 'https://www.digitalocean.com/community/tutorials/how-to-run-openclaw',
-    source: 'DigitalOcean',
-    lang: 'en',
-    category: 'deploy',
-    featured: true,
-    tags: ['云部署', '一键']
-  },
-  {
-    title: '腾讯云 OpenClaw 接入飞书',
-    desc: 'Lighthouse 部署与飞书机器人配置全流程。',
-    url: 'https://cloud.tencent.com/developer/article/2625073',
-    source: '腾讯云',
-    lang: 'zh',
-    category: 'deploy',
-    featured: true,
-    tags: ['腾讯云', '飞书']
-  },
-  {
-    title: '阿里云部署 OpenClaw 构建钉钉助手',
-    desc: '国内服务器部署与钉钉机器人接入示例。',
-    url: 'https://help.aliyun.com/zh/simple-application-server/use-cases/quickly-deploy-and-use-openclaw',
-    source: '阿里云',
-    lang: 'zh',
-    category: 'deploy',
-    featured: false,
-    tags: ['阿里云', '钉钉']
-  },
-  {
-    title: 'OpenClaw 安装部署图文详解',
-    desc: '从环境准备到首次运行的完整步骤。',
-    url: 'https://apifox.com/apiskills/openclaw-installation-and-usage-guide/',
-    source: 'Apifox',
-    lang: 'zh',
-    category: 'getting-started',
-    featured: true,
-    tags: ['新手', '图文']
-  },
-  {
-    title: 'Codecademy: OpenClaw Installation to First Chat',
-    desc: '从安装到首个可用 AI 助手的英文课程。',
-    url: 'https://www.codecademy.com/article/openclaw-installation-to-first-chat',
-    source: 'Codecademy',
-    lang: 'en',
-    category: 'getting-started',
-    featured: false,
-    tags: ['课程', '英文']
-  },
-  {
-    title: 'OpenClaw 连接 Telegram 教程',
-    desc: '包含 BotFather 配置与权限常见坑位。',
-    url: 'https://www.cnblogs.com/gyc567/p/19561281',
-    source: '博客园',
-    lang: 'zh',
-    category: 'channel',
-    featured: false,
-    tags: ['Telegram', '接入']
-  },
-  {
-    title: '企业微信接入 OpenClaw 全流程',
-    desc: '企业微信机器人在团队中的接入方式。',
-    url: 'https://cloud.tencent.com/developer/article/2625147',
-    source: '腾讯云',
-    lang: 'zh',
-    category: 'channel',
-    featured: false,
-    tags: ['企业微信', '团队']
-  },
-  {
-    title: 'ClawHub Skill 开发模板',
-    desc: '技能目录结构、参数定义和发布流程。',
-    url: 'https://github.com/openclaw/skills',
-    source: 'GitHub',
-    lang: 'en',
-    category: 'skills',
-    featured: true,
-    tags: ['开发', '发布']
-  },
-  {
-    title: '自定义技能实战：从需求到上线',
-    desc: '完整演示一个可复用技能的开发过程。',
-    url: 'https://juejin.cn/',
-    source: '掘金',
-    lang: 'zh',
-    category: 'skills',
-    featured: false,
-    tags: ['实战', '开发']
-  },
-  {
-    title: 'B 站：OpenClaw 新手 30 分钟上手',
-    desc: '可视化演示安装、连平台、跑第一条任务。',
-    url: 'https://www.bilibili.com/',
-    source: 'Bilibili',
-    lang: 'zh',
-    category: 'video',
-    featured: true,
-    tags: ['视频', '入门']
-  },
-  {
-    title: 'YouTube: OpenClaw Workflow Deep Dive',
-    desc: '面向高级用户的工作流与自动化示例。',
-    url: 'https://www.youtube.com/',
-    source: 'YouTube',
-    lang: 'en',
-    category: 'video',
-    featured: false,
-    tags: ['Workflow', 'Advanced']
-  },
-  {
-    title: '团队 AI 助手落地案例（SaaS 运营）',
-    desc: '知识库 + 自动回复 + 周报产出的一体化方案。',
-    url: 'https://medium.com/',
-    source: 'Medium',
-    lang: 'en',
-    category: 'case',
-    featured: false,
-    tags: ['运营', '案例']
-  },
-  {
-    title: 'OpenClaw 在内容团队的应用实践',
-    desc: '选题生成、资料聚合、初稿写作协同流程。',
-    url: 'https://www.53ai.com/',
-    source: '53AI',
-    lang: 'zh',
-    category: 'case',
-    featured: false,
-    tags: ['内容', '协同']
-  },
-  {
-    title: '浏览器自动化 Skill 与 Playwright 组合',
-    desc: '用浏览器技能做数据抓取与表单自动化。',
-    url: 'https://playwright.dev/',
-    source: 'Playwright',
-    lang: 'en',
-    category: 'tools',
-    featured: false,
-    tags: ['自动化', '浏览器']
-  },
-  {
-    title: 'Notion + OpenClaw 工作台模板',
-    desc: '任务池、上下文记录和执行日志模板。',
-    url: 'https://www.notion.so/',
-    source: 'Notion',
-    lang: 'en',
-    category: 'tools',
-    featured: false,
-    tags: ['模板', '效率']
-  }
-];
-
-const sourceDot = {
-  OpenClaw: '#2563eb',
-  GitHub: '#1f2937',
-  ClawHub: '#10b981',
-  DigitalOcean: '#0069ff',
-  腾讯云: '#0052d9',
-  阿里云: '#ff6a00',
-  Apifox: '#e8432a',
-  Codecademy: '#1557ff',
-  博客园: '#3b82f6',
-  掘金: '#1e80ff',
-  Bilibili: '#fb7299',
-  YouTube: '#ff0000',
-  Medium: '#0f172a',
-  '53AI': '#6366f1',
-  Playwright: '#2e9b4d',
-  Notion: '#111827'
-};
+const STORAGE_KEY = 'claw-study-lab-v1';
+const STOP_WORDS = new Set([
+  'about', 'after', 'again', 'against', 'almost', 'along', 'also', 'although', 'always', 'among',
+  'because', 'before', 'being', 'between', 'both', 'could', 'every', 'first', 'from', 'have',
+  'however', 'just', 'many', 'might', 'more', 'most', 'other', 'over', 'same', 'such', 'than',
+  'that', 'their', 'there', 'these', 'they', 'this', 'those', 'through', 'under', 'very', 'were',
+  'what', 'when', 'where', 'which', 'while', 'with', 'would', 'your', 'into', 'onto', 'been',
+  'them', 'then', 'some', 'each', 'like', 'only', 'make', 'made', 'does', 'did', 'much', 'well'
+]);
 
 const state = {
-  query: '',
-  category: 'all',
-  featuredOnly: false
+  article: null,
+  favorites: [],
+  vocab: {},
+  history: [],
+  lastAudio: null,
+  lastScore: null,
 };
 
-const searchInput = document.getElementById('searchInput');
-const categoryChips = document.getElementById('categoryChips');
-const featuredBtn = document.getElementById('featuredBtn');
-const resetBtn = document.getElementById('resetBtn');
-const resultCount = document.getElementById('resultCount');
-const stats = document.getElementById('stats');
-const spotlightGrid = document.getElementById('spotlightGrid');
-const categorySections = document.getElementById('categorySections');
+const articleUrlInput = document.getElementById('articleUrlInput');
+const loadArticleBtn = document.getElementById('loadArticleBtn');
+const loadStatus = document.getElementById('loadStatus');
+
+const articleTitle = document.getElementById('articleTitle');
+const articleInfo = document.getElementById('articleInfo');
+const articleContent = document.getElementById('articleContent');
+
+const saveSelectionBtn = document.getElementById('saveSelectionBtn');
+const saveSessionBtn = document.getElementById('saveSessionBtn');
+
+const playAudioBtn = document.getElementById('playAudioBtn');
+const wordLookupResult = document.getElementById('wordLookupResult');
+const favoriteList = document.getElementById('favoriteList');
+const clearFavoritesBtn = document.getElementById('clearFavoritesBtn');
+const vocabList = document.getElementById('vocabList');
+const exportVocabBtn = document.getElementById('exportVocabBtn');
+
+const aiEndpointInput = document.getElementById('aiEndpointInput');
+const aiModelInput = document.getElementById('aiModelInput');
+const aiKeyInput = document.getElementById('aiKeyInput');
+
+const summaryInput = document.getElementById('summaryInput');
+const scoreSummaryBtn = document.getElementById('scoreSummaryBtn');
+const scoreResult = document.getElementById('scoreResult');
+const historyList = document.getElementById('historyList');
 
 function escapeHtml(text) {
   return text
@@ -235,187 +53,673 @@ function escapeHtml(text) {
     .replaceAll("'", '&#39;');
 }
 
-function setupStats() {
-  const zhCount = resources.filter((item) => item.lang === 'zh').length;
-  const enCount = resources.filter((item) => item.lang === 'en').length;
-  const sourceCount = new Set(resources.map((item) => item.source)).size;
+function setStatus(message, type = '') {
+  loadStatus.textContent = message;
+  loadStatus.className = `status ${type}`.trim();
+}
 
-  stats.innerHTML = [
-    { value: `${resources.length}+`, label: '资源' },
-    { value: `${zhCount}`, label: '中文' },
-    { value: `${enCount}`, label: '英文' },
-    { value: `${sourceCount}`, label: '来源' }
-  ]
+function persist() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      favorites: state.favorites,
+      vocab: state.vocab,
+      history: state.history,
+      aiEndpoint: aiEndpointInput.value.trim(),
+      aiModel: aiModelInput.value.trim(),
+    })
+  );
+}
+
+function loadPersistedState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+
+  try {
+    const parsed = JSON.parse(raw);
+    state.favorites = Array.isArray(parsed.favorites) ? parsed.favorites : [];
+    state.vocab = parsed.vocab && typeof parsed.vocab === 'object' ? parsed.vocab : {};
+    state.history = Array.isArray(parsed.history) ? parsed.history : [];
+
+    if (parsed.aiEndpoint) aiEndpointInput.value = parsed.aiEndpoint;
+    if (parsed.aiModel) aiModelInput.value = parsed.aiModel;
+  } catch {
+    // Ignore corrupted local state.
+  }
+}
+
+function renderFavorites() {
+  if (!state.favorites.length) {
+    favoriteList.innerHTML = '<li><p class="empty-note">还没有收藏内容。</p></li>';
+    return;
+  }
+
+  favoriteList.innerHTML = state.favorites
+    .slice()
+    .reverse()
     .map(
       (item) => `
-      <div class="stat">
-        <strong>${item.value}</strong>
-        <span>${item.label}</span>
-      </div>
+      <li>
+        <div class="item-top">
+          <strong>${escapeHtml(item.text)}</strong>
+          <button class="remove-btn" type="button" data-remove-favorite="${item.id}">删除</button>
+        </div>
+        <p class="item-meta">${escapeHtml(item.articleTitle || '未知文章')} · ${formatDate(item.createdAt)}</p>
+      </li>
     `
     )
     .join('');
 }
 
-function setupCategoryChips() {
-  const allCount = resources.length;
-  const chips = [
-    `<button class="chip ${state.category === 'all' ? 'active' : ''}" data-category="all">全部 (${allCount})</button>`
-  ];
+function renderVocab() {
+  const words = Object.values(state.vocab);
 
-  for (const category of categories) {
-    const count = resources.filter((item) => item.category === category.id).length;
-    const active = state.category === category.id ? 'active' : '';
-
-    chips.push(
-      `<button class="chip ${active}" data-category="${category.id}">${category.label} (${count})</button>`
-    );
-  }
-
-  categoryChips.innerHTML = chips.join('');
-
-  categoryChips.querySelectorAll('button').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.category = button.dataset.category;
-      render();
-    });
-  });
-}
-
-function getFilteredResources() {
-  const q = state.query.trim().toLowerCase();
-
-  return resources.filter((item) => {
-    if (state.category !== 'all' && item.category !== state.category) {
-      return false;
-    }
-
-    if (state.featuredOnly && !item.featured) {
-      return false;
-    }
-
-    if (!q) {
-      return true;
-    }
-
-    const bag = [item.title, item.desc, item.source, ...(item.tags || [])].join(' ').toLowerCase();
-    return bag.includes(q);
-  });
-}
-
-function renderCard(item, category) {
-  const langLabel = item.lang === 'zh' ? '中文' : 'EN';
-  const dot = sourceDot[item.source] || '#64748b';
-  const tags = (item.tags || [])
-    .slice(0, 3)
-    .map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`)
-    .join('');
-
-  return `
-    <a class="card" href="${item.url}" target="_blank" rel="noopener noreferrer" style="border-color:${category.soft};">
-      <div class="card-top">
-        <span class="card-lang" style="background:${category.soft};color:${category.accent};">${langLabel}${
-    item.featured ? ' · TOP' : ''
-  }</span>
-        <span class="card-open">打开链接</span>
-      </div>
-      <h4>${escapeHtml(item.title)}</h4>
-      <p>${escapeHtml(item.desc)}</p>
-      <div class="tags">${tags}</div>
-      <div class="card-foot">
-        <span class="dot" style="background:${dot};"></span>
-        <span>${escapeHtml(item.source)}</span>
-      </div>
-    </a>
-  `;
-}
-
-function renderSpotlight(filtered) {
-  if (state.query || state.category !== 'all' || state.featuredOnly) {
-    spotlightGrid.parentElement.style.display = 'none';
+  if (!words.length) {
+    vocabList.innerHTML = '<li><p class="empty-note">点击文章单词后，词汇会自动进入这里。</p></li>';
     return;
   }
 
-  spotlightGrid.parentElement.style.display = 'block';
+  vocabList.innerHTML = words
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .map(
+      (item) => `
+      <li>
+        <div class="item-top">
+          <strong>${escapeHtml(item.word)}</strong>
+          <button class="remove-btn" type="button" data-remove-word="${escapeHtml(item.word)}">删除</button>
+        </div>
+        <p class="item-meta">${escapeHtml(item.phonetic || '无音标')} · ${escapeHtml(item.definition || '无释义')}</p>
+      </li>
+    `
+    )
+    .join('');
+}
 
-  const picks = filtered.filter((item) => item.featured).slice(0, 4);
+function renderHistory() {
+  if (!state.history.length) {
+    historyList.innerHTML = '<li><p class="empty-note">保存学习记录后，会在这里展示。</p></li>';
+    return;
+  }
 
-  spotlightGrid.innerHTML = picks
-    .map((item) => {
-      const category = categories.find((x) => x.id === item.category) || categories[0];
-      return renderCard(item, category);
+  historyList.innerHTML = state.history
+    .slice()
+    .reverse()
+    .map(
+      (item) => `
+      <li>
+        <div class="item-top">
+          <strong>${escapeHtml(item.title || '未命名文章')}</strong>
+        </div>
+        <p class="item-meta">${formatDate(item.createdAt)} · 得分 ${item.score ?? '-'} · 词汇 ${item.vocabCount} · 收藏 ${item.favoriteCount}</p>
+      </li>
+    `
+    )
+    .join('');
+}
+
+function formatDate(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '-';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(
+    2,
+    '0'
+  )} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function buildClickableParagraph(text) {
+  const tokenReg = /([A-Za-z]+(?:['-][A-Za-z]+)*)/g;
+  const chunks = text.split(tokenReg);
+
+  return chunks
+    .map((chunk) => {
+      if (/^[A-Za-z]+(?:['-][A-Za-z]+)*$/.test(chunk)) {
+        const normalized = chunk.toLowerCase();
+        return `<button type="button" class="word-chip" data-word="${normalized}">${escapeHtml(chunk)}</button>`;
+      }
+      return escapeHtml(chunk);
     })
     .join('');
 }
 
-function renderCategorySections(filtered) {
-  if (!filtered.length) {
-    categorySections.innerHTML = `
-      <div class="empty">
-        <strong>没有匹配结果</strong>
-        换一个关键词试试，或点击“重置”恢复默认筛选。
-      </div>
-    `;
+function renderArticle() {
+  if (!state.article) {
+    articleTitle.textContent = '未加载';
+    articleInfo.textContent = '加载后会显示文章来源、字数和解析结果。';
+    articleContent.innerHTML = '<p class="empty-note">加载文章后，这里会显示可点击查词的正文内容。</p>';
     return;
   }
 
-  const sections = [];
+  articleTitle.textContent = state.article.title || '未命名文章';
+  articleInfo.textContent = `${state.article.siteName || '未知来源'} · ${state.article.wordCount} 词 · ${state.article.paragraphs.length} 段`;
 
-  categories.forEach((category, index) => {
-    const items = filtered.filter((item) => item.category === category.id);
-    if (!items.length) {
+  articleContent.innerHTML = state.article.paragraphs
+    .map((p) => `<p>${buildClickableParagraph(p)}</p>`)
+    .join('');
+}
+
+function normalizeParagraphs(text) {
+  return text
+    .split(/\n{2,}/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 40)
+    .slice(0, 120);
+}
+
+async function fetchArticle(url) {
+  const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`;
+  const response = await fetch(proxyUrl, {
+    headers: {
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`抓取失败（${response.status}）`);
+  }
+
+  const html = await response.text();
+  const dom = new DOMParser().parseFromString(html, 'text/html');
+
+  let parsed = null;
+  if (typeof Readability !== 'undefined') {
+    try {
+      parsed = new Readability(dom).parse();
+    } catch {
+      parsed = null;
+    }
+  }
+
+  const title = parsed?.title || dom.title || url;
+  const textContent = (parsed?.textContent || dom.body?.innerText || '').replace(/\s+\n/g, '\n').trim();
+  const paragraphs = normalizeParagraphs(textContent);
+
+  if (!paragraphs.length) {
+    throw new Error('未能解析到正文内容，请换一个文章链接。');
+  }
+
+  const siteName = parsed?.siteName || new URL(url).hostname;
+  const wordCount = (textContent.match(/[A-Za-z]+/g) || []).length;
+
+  return {
+    url,
+    title,
+    siteName,
+    text: textContent,
+    paragraphs,
+    wordCount,
+    loadedAt: new Date().toISOString(),
+  };
+}
+
+function getSelectedText() {
+  return window.getSelection ? window.getSelection().toString().trim() : '';
+}
+
+function addFavorite(text) {
+  if (!text) return;
+  if (state.favorites.some((item) => item.text === text)) return;
+
+  state.favorites.push({
+    id: `fav_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+    text,
+    articleTitle: state.article?.title || '',
+    createdAt: new Date().toISOString(),
+  });
+
+  persist();
+  renderFavorites();
+}
+
+function extractOutputText(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+
+  if (typeof payload.output_text === 'string') return payload.output_text;
+
+  if (Array.isArray(payload.output)) {
+    const texts = [];
+    payload.output.forEach((item) => {
+      if (Array.isArray(item.content)) {
+        item.content.forEach((piece) => {
+          if (typeof piece.text === 'string') texts.push(piece.text);
+        });
+      }
+    });
+    if (texts.length) return texts.join('\n');
+  }
+
+  if (Array.isArray(payload.choices) && payload.choices[0]?.message?.content) {
+    return payload.choices[0].message.content;
+  }
+
+  return '';
+}
+
+function parseJsonSafely(text) {
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Continue parsing from fenced block.
+  }
+
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+}
+
+function collectKeywords(text, limit = 20) {
+  const words = (text.toLowerCase().match(/[a-z]{4,}/g) || []).filter((word) => !STOP_WORDS.has(word));
+
+  const freq = {};
+  words.forEach((word) => {
+    freq[word] = (freq[word] || 0) + 1;
+  });
+
+  return Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([word]) => word);
+}
+
+function heuristicScore(articleText, summary) {
+  const articleWords = (articleText.match(/[A-Za-z]+/g) || []).length;
+  const summaryWords = (summary.match(/[A-Za-z]+/g) || []).length;
+
+  const articleKeywords = collectKeywords(articleText, 24);
+  const summaryKeywords = new Set(collectKeywords(summary, 24));
+
+  const overlapCount = articleKeywords.filter((k) => summaryKeywords.has(k)).length;
+  const coverage = articleKeywords.length ? overlapCount / articleKeywords.length : 0;
+  const lengthRatio = articleWords ? summaryWords / articleWords : 0;
+  const sentenceCount = summary.split(/[.!?。！？]/).filter((line) => line.trim()).length;
+
+  const lengthScore = Math.max(0, Math.min(1, 1 - Math.abs(lengthRatio - 0.2) / 0.2));
+  const structureScore = Math.max(0, Math.min(1, sentenceCount / 4));
+
+  const score = Math.round((coverage * 0.55 + lengthScore * 0.3 + structureScore * 0.15) * 100);
+
+  const strengths = [];
+  const suggestions = [];
+
+  if (coverage >= 0.45) strengths.push('关键信息覆盖率较好。');
+  else suggestions.push('可以增加文章核心概念和关键词，避免只写感受。');
+
+  if (lengthRatio >= 0.12 && lengthRatio <= 0.32) strengths.push('总结长度比较合适。');
+  else suggestions.push('总结过长或过短，建议控制在原文 15%~30%。');
+
+  if (sentenceCount >= 3) strengths.push('表达有一定结构层次。');
+  else suggestions.push('建议至少写 3 句，按“观点-细节-结论”组织。');
+
+  if (!strengths.length) strengths.push('能看出你已经抓住了文章的大方向。');
+
+  return {
+    mode: 'heuristic',
+    score,
+    strengths,
+    suggestions,
+    revisedSummary: '',
+  };
+}
+
+async function scoreWithAi(articleText, summary) {
+  const endpoint = aiEndpointInput.value.trim();
+  const model = aiModelInput.value.trim();
+  const apiKey = aiKeyInput.value.trim();
+
+  if (!endpoint || !model || !apiKey) {
+    throw new Error('AI 配置不完整');
+  }
+
+  const systemPrompt =
+    'You are an English reading coach. Grade summary quality from 0-100. Return strict JSON only.';
+  const userPrompt = `
+Article:\n${articleText.slice(0, 12000)}\n\nUser summary:\n${summary}\n\nReturn JSON with keys:
+score(number), strengths(string[]), suggestions(string[]), revisedSummary(string).
+Keep feedback concise.
+`;
+
+  const payload = endpoint.includes('/chat/completions')
+    ? {
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.2,
+      }
+    : {
+        model,
+        input: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      };
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`AI 请求失败: ${response.status} ${text.slice(0, 120)}`);
+  }
+
+  const raw = await response.json();
+  const text = extractOutputText(raw);
+  const parsed = parseJsonSafely(text);
+
+  if (!parsed || typeof parsed.score !== 'number') {
+    throw new Error('AI 返回格式不可解析');
+  }
+
+  return {
+    mode: 'ai',
+    score: Math.max(0, Math.min(100, Math.round(parsed.score))),
+    strengths: Array.isArray(parsed.strengths) ? parsed.strengths.slice(0, 5) : [],
+    suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 5) : [],
+    revisedSummary: typeof parsed.revisedSummary === 'string' ? parsed.revisedSummary : '',
+  };
+}
+
+function renderScoreResult(result, errorHint = '') {
+  const gradeClass = result.score >= 80 ? 'good' : result.score >= 60 ? 'medium' : 'low';
+  const modeLabel = result.mode === 'ai' ? 'AI 评分' : '智能评分';
+
+  const strengthsHtml =
+    result.strengths && result.strengths.length
+      ? `<ul>${result.strengths.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`
+      : '<p class="empty-note">暂无</p>';
+
+  const suggestionsHtml =
+    result.suggestions && result.suggestions.length
+      ? `<ul>${result.suggestions.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`
+      : '<p class="empty-note">暂无</p>';
+
+  scoreResult.innerHTML = `
+    <span class="score-badge ${gradeClass}">${modeLabel}：${result.score} / 100</span>
+    ${errorHint ? `<p class="item-meta">${escapeHtml(errorHint)}</p>` : ''}
+    <div class="score-block">
+      <h4>做得好的地方</h4>
+      ${strengthsHtml}
+    </div>
+    <div class="score-block">
+      <h4>修改建议</h4>
+      ${suggestionsHtml}
+    </div>
+    ${
+      result.revisedSummary
+        ? `<div class="score-block"><h4>参考改写</h4><p class="item-meta">${escapeHtml(result.revisedSummary)}</p></div>`
+        : ''
+    }
+  `;
+}
+
+async function lookupWord(word) {
+  if (!word) return;
+
+  wordLookupResult.innerHTML = `<p class="empty-note">正在查询 <strong>${escapeHtml(word)}</strong> ...</p>`;
+
+  try {
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+    if (!response.ok) throw new Error('词典中未找到该单词');
+
+    const data = await response.json();
+    const entry = data[0] || {};
+    const phonetic =
+      entry.phonetic || (Array.isArray(entry.phonetics) && entry.phonetics.find((p) => p.text)?.text) || '无音标';
+    const audio =
+      (Array.isArray(entry.phonetics) && entry.phonetics.find((p) => p.audio && p.audio.trim())?.audio) || '';
+
+    const meanings = (entry.meanings || [])
+      .flatMap((m) => (m.definitions || []).map((d) => `${m.partOfSpeech || 'meaning'}: ${d.definition}`))
+      .slice(0, 4);
+
+    const example =
+      (entry.meanings || [])
+        .flatMap((m) => (m.definitions || []).map((d) => d.example).filter(Boolean))[0] || '暂无例句';
+
+    state.lastAudio = audio || null;
+    playAudioBtn.disabled = !audio;
+
+    wordLookupResult.innerHTML = `
+      <div class="word-title">
+        <strong>${escapeHtml(entry.word || word)}</strong>
+        <span class="phonetic">${escapeHtml(phonetic)}</span>
+      </div>
+      <ol class="meaning-list">
+        ${meanings.map((line) => `<li>${escapeHtml(line)}</li>`).join('') || '<li>暂无英英释义</li>'}
+      </ol>
+      <p class="example-box"><strong>例句：</strong> ${escapeHtml(example)}</p>
+    `;
+
+    state.vocab[word.toLowerCase()] = {
+      word: (entry.word || word).toLowerCase(),
+      phonetic,
+      definition: meanings[0] || '暂无释义',
+      example,
+      audio,
+      updatedAt: new Date().toISOString(),
+    };
+
+    persist();
+    renderVocab();
+  } catch (error) {
+    playAudioBtn.disabled = true;
+    state.lastAudio = null;
+    wordLookupResult.innerHTML = `<p class="empty-note">查词失败：${escapeHtml(error.message || 'unknown error')}</p>`;
+  }
+}
+
+function exportVocabCsv() {
+  const words = Object.values(state.vocab);
+  if (!words.length) {
+    alert('词汇本为空，先点击正文查词。');
+    return;
+  }
+
+  const header = ['word', 'phonetic', 'definition', 'example', 'updatedAt'];
+  const rows = words.map((item) => [item.word, item.phonetic, item.definition, item.example, item.updatedAt]);
+  const csv = [header, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell || '').replaceAll('"', '""')}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vocabulary-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function saveSession() {
+  if (!state.article) {
+    alert('请先加载文章。');
+    return;
+  }
+
+  const record = {
+    id: `session_${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    url: state.article.url,
+    title: state.article.title,
+    score: state.lastScore?.score ?? null,
+    vocabCount: Object.keys(state.vocab).length,
+    favoriteCount: state.favorites.length,
+    summary: summaryInput.value.trim().slice(0, 5000),
+  };
+
+  state.history.push(record);
+  if (state.history.length > 80) {
+    state.history = state.history.slice(-80);
+  }
+
+  persist();
+  renderHistory();
+  alert('已保存本次学习记录。');
+}
+
+async function handleLoadArticle() {
+  const url = articleUrlInput.value.trim();
+  if (!url) {
+    setStatus('请输入文章链接。', 'error');
+    return;
+  }
+
+  let normalizedUrl = url;
+  try {
+    normalizedUrl = new URL(url).toString();
+  } catch {
+    setStatus('链接格式不正确。', 'error');
+    return;
+  }
+
+  loadArticleBtn.disabled = true;
+  setStatus('正在抓取并解析文章，请稍等...');
+
+  try {
+    state.article = await fetchArticle(normalizedUrl);
+    renderArticle();
+    setStatus('文章解析成功。你可以点击单词查词。', 'ok');
+  } catch (error) {
+    setStatus(error.message || '文章解析失败。', 'error');
+  } finally {
+    loadArticleBtn.disabled = false;
+  }
+}
+
+function bindEvents() {
+  loadArticleBtn.addEventListener('click', handleLoadArticle);
+
+  articleUrlInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleLoadArticle();
+    }
+  });
+
+  articleUrlInput.addEventListener('paste', () => {
+    setTimeout(() => {
+      const text = articleUrlInput.value.trim();
+      if (/^https?:\/\//i.test(text)) {
+        handleLoadArticle();
+      }
+    }, 80);
+  });
+
+  articleContent.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const word = target.dataset.word;
+    if (!word) return;
+    lookupWord(word);
+  });
+
+  saveSelectionBtn.addEventListener('click', () => {
+    const selected = getSelectedText();
+    if (!selected || selected.length < 2) {
+      alert('请先在文章区域选中一句话或短语。');
+      return;
+    }
+    addFavorite(selected);
+  });
+
+  saveSessionBtn.addEventListener('click', saveSession);
+
+  playAudioBtn.addEventListener('click', () => {
+    if (!state.lastAudio) return;
+    const audio = new Audio(state.lastAudio);
+    audio.play().catch(() => {
+      alert('播放失败，可能是浏览器拦截了自动音频。');
+    });
+  });
+
+  favoriteList.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const id = target.dataset.removeFavorite;
+    if (!id) return;
+
+    state.favorites = state.favorites.filter((item) => item.id !== id);
+    persist();
+    renderFavorites();
+  });
+
+  clearFavoritesBtn.addEventListener('click', () => {
+    if (!state.favorites.length) return;
+    state.favorites = [];
+    persist();
+    renderFavorites();
+  });
+
+  vocabList.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const word = target.dataset.removeWord;
+    if (!word) return;
+    delete state.vocab[word.toLowerCase()];
+    persist();
+    renderVocab();
+  });
+
+  exportVocabBtn.addEventListener('click', exportVocabCsv);
+
+  scoreSummaryBtn.addEventListener('click', async () => {
+    if (!state.article) {
+      alert('请先加载文章。');
       return;
     }
 
-    const cards = items.map((item) => renderCard(item, category)).join('');
+    const summary = summaryInput.value.trim();
+    if (summary.length < 30) {
+      alert('总结太短，至少写 30 个字符。');
+      return;
+    }
 
-    sections.push(`
-      <article class="category-box" style="animation-delay:${index * 70}ms;">
-        <div class="category-head">
-          <div class="category-icon" style="background:${category.soft};">${category.icon}</div>
-          <div>
-            <h3>${category.label}</h3>
-            <p>${category.desc}</p>
-          </div>
-          <span class="category-count" style="background:${category.soft};color:${category.accent};">${items.length}</span>
-        </div>
-        <div class="resource-grid">${cards}</div>
-      </article>
-    `);
+    scoreSummaryBtn.disabled = true;
+    scoreResult.innerHTML = '<p class="empty-note">正在评分中...</p>';
+
+    const heuristic = heuristicScore(state.article.text, summary);
+    let finalResult = heuristic;
+    let hint = '';
+
+    if (aiKeyInput.value.trim()) {
+      try {
+        finalResult = await scoreWithAi(state.article.text, summary);
+      } catch (error) {
+        hint = `AI 调用失败，已使用内置智能评分：${error.message || 'unknown error'}`;
+        finalResult = heuristic;
+      }
+    }
+
+    state.lastScore = finalResult;
+    renderScoreResult(finalResult, hint);
+    persist();
+    scoreSummaryBtn.disabled = false;
   });
 
-  categorySections.innerHTML = sections.join('');
+  aiEndpointInput.addEventListener('change', persist);
+  aiModelInput.addEventListener('change', persist);
 }
 
-function render() {
-  setupCategoryChips();
-
-  featuredBtn.classList.toggle('active', state.featuredOnly);
-
-  const filtered = getFilteredResources();
-  resultCount.textContent = String(filtered.length);
-
-  renderSpotlight(filtered);
-  renderCategorySections(filtered);
+function init() {
+  loadPersistedState();
+  renderArticle();
+  renderFavorites();
+  renderVocab();
+  renderHistory();
+  bindEvents();
 }
 
-searchInput.addEventListener('input', (event) => {
-  state.query = event.target.value;
-  render();
-});
-
-featuredBtn.addEventListener('click', () => {
-  state.featuredOnly = !state.featuredOnly;
-  render();
-});
-
-resetBtn.addEventListener('click', () => {
-  state.query = '';
-  state.category = 'all';
-  state.featuredOnly = false;
-  searchInput.value = '';
-  render();
-});
-
-setupStats();
-render();
+init();

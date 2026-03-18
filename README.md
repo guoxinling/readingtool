@@ -28,7 +28,48 @@ python3 -m http.server 5173
 - `本地桥接`：通过本机 Playwright 浏览器会话抓取正文，适合 WSJ 等站点。
 
 > 说明：WSJ / FT / NYT 这类站点常有登录、订阅和反爬限制，默认代理模式可能拿不到正文。
-> 说明：视频模式当前主要支持 YouTube 链接；若视频无公开字幕，可切换“手动粘贴”。
+> 说明：视频模式支持自动转写回退。若公开字幕不可用，可调用本地转写服务自动生成脚本。
+
+## 视频自动转写（Whisper / OpenAI）
+
+安装依赖（macOS 示例）：
+
+```bash
+brew install yt-dlp ffmpeg
+```
+
+可选一：用 OpenAI 转写（推荐，速度更快）
+
+```bash
+export OPENAI_API_KEY=sk-...
+export OPENAI_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+```
+
+可选二：纯本地 Whisper CLI（不走 API）
+
+```bash
+pip install openai-whisper
+# 可选：选择模型
+export WHISPER_MODEL=base
+```
+
+启动本地转写服务：
+
+```bash
+cd /Users/guoxl/Documents/Playground/claw-nav-site
+python3 tools/transcribe-bridge.py --port 8790
+```
+
+然后在页面“视频字幕”模式中保留默认 Endpoint：
+
+```text
+http://127.0.0.1:8790/transcribe
+```
+
+工作机制：
+
+- 先尝试提取公开视频字幕。
+- 提取失败时，自动调用转写 Endpoint 下载音频并转写。
 
 ## 本地桥接（可选）
 

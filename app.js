@@ -39,6 +39,7 @@ const bridgeModePanel = document.getElementById('bridgeModePanel');
 const bridgeEndpointInput = document.getElementById('bridgeEndpointInput');
 const videoModePanel = document.getElementById('videoModePanel');
 const videoLangInput = document.getElementById('videoLangInput');
+const videoTranscribeEndpointInput = document.getElementById('videoTranscribeEndpointInput');
 
 const articleTitle = document.getElementById('articleTitle');
 const articleInfo = document.getElementById('articleInfo');
@@ -95,6 +96,7 @@ function persist() {
       aiModel: aiModelInput.value.trim(),
       bridgeEndpoint: bridgeEndpointInput.value.trim(),
       videoLang: videoLangInput.value.trim() || 'en',
+      videoTranscribeEndpoint: videoTranscribeEndpointInput.value.trim(),
       loadMode: state.loadMode,
     })
   );
@@ -114,6 +116,7 @@ function loadPersistedState() {
     if (parsed.aiModel) aiModelInput.value = parsed.aiModel;
     if (parsed.bridgeEndpoint) bridgeEndpointInput.value = parsed.bridgeEndpoint;
     if (parsed.videoLang) videoLangInput.value = parsed.videoLang;
+    if (parsed.videoTranscribeEndpoint) videoTranscribeEndpointInput.value = parsed.videoTranscribeEndpoint;
 
     if (parsed.loadMode && LOAD_MODE_LABEL[parsed.loadMode]) {
       state.loadMode = parsed.loadMode;
@@ -777,11 +780,76 @@ async function fetchSubtitleFileText(url) {
   return cleanupSubtitleText(raw);
 }
 
-async function fetchVideoTranscript(url, preferredLang = 'en') {
+async function fetchVideoTranscriptViaBridge(url, endpoint, preferredLang = 'en') {
+  if (!endpoint) {
+    throw createLoadError('自动转写 Endpoint 为空。', 'VIDEO_TRANSCRIBE_ENDPOINT_MISSING');
+  }
+
+  let normalizedEndpoint = endpoint;
+  try {
+    normalizedEndpoint = new URL(endpoint).toString();
+  } catch {
+    throw createLoadError('自动转写 Endpoint 格式不正确。', 'VIDEO_TRANSCRIBE_ENDPOINT_INVALID');
+  }
+
+  let response;
+  try {
+    response = await fetch(normalizedEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url,
+        language: preferredLang || 'en',
+      }),
+    });
+  } catch (error) {
+    throw createLoadError(
+      `无法连接自动转写服务：${error.message || 'network error'}`,
+      'VIDEO_TRANSCRIBE_OFFLINE',
+      '请先启动本地自动转写服务（tools/transcribe-bridge.py）。'
+    );
+  }
+
+  if (!response.ok) {
+    const raw = await response.text();
+    throw createLoadError(
+      `自动转写服务失败（${response.status}）：${raw.slice(0, 180)}`,
+      'VIDEO_TRANSCRIBE_HTTP_ERROR',
+      '请检查转写服务日志，或切换“手动粘贴”模式。'
+    );
+  }
+
+  const payload = await response.json();
+  if (!payload || typeof payload.text !== 'string' || payload.text.trim().length < 120) {
+    throw createLoadError(
+      '自动转写结果为空或过短。',
+      'VIDEO_TRANSCRIBE_EMPTY',
+      '请确认视频有可解析音频，或换视频重试。'
+    );
+  }
+
+  return buildArticleFromText({
+    url: payload.url || url,
+    title: payload.title || `Video Transcript (${getHostnameFromUrl(url) || 'video'})`,
+    siteName: payload.siteName || `${getHostnameFromUrl(url) || 'video'} · 自动转写`,
+    text: payload.text,
+    loadMode: 'video',
+  });
+}
+
+async function fetchVideoTranscript(url, preferredLang = 'en', options = {}) {
+  const transcribeEndpoint = String(options.transcribeEndpoint || '').trim();
   const host = getHostnameFromUrl(url).toLowerCase();
   const isYouTube = host === 'youtu.be' || host.includes('youtube.com') || host.includes('youtube-nocookie.com');
   if (isYouTube) {
-    return fetchYouTubeTranscript(url, preferredLang);
+    try {
+      return await fetchYouTubeTranscript(url, preferredLang);
+    } catch (error) {
+      if (!transcribeEndpoint) throw error;
+      return fetchVideoTranscriptViaBridge(url, transcribeEndpoint, preferredLang);
+    }
   }
 
   if (/\.(vtt|srt|txt)([?#].*)?$/i.test(url)) {
@@ -798,10 +866,14 @@ async function fetchVideoTranscript(url, preferredLang = 'en') {
     });
   }
 
+  if (transcribeEndpoint) {
+    return fetchVideoTranscriptViaBridge(url, transcribeEndpoint, preferredLang);
+  }
+
   throw createLoadError(
-    '当前仅支持 YouTube 视频链接，或可直接访问的 .srt/.vtt/.txt 字幕文件链接。',
+    '当前仅支持 YouTube 视频链接、可访问的 .srt/.vtt/.txt 字幕链接，或配置自动转写 Endpoint。',
     'VIDEO_UNSUPPORTED',
-    '你可以换成 YouTube 链接，或把脚本粘贴到“手动粘贴”模式。'
+    '你可以配置自动转写服务，或把脚本粘贴到“手动粘贴”模式。'
   );
 }
 
@@ -1184,6 +1256,8 @@ async function handleLoadArticle() {
   const mode = getLoadMode();
   state.loadMode = mode;
   const url = articleUrlInput.value.trim();
+  const videoLang = videoLangInput.value.trim() || 'en';
+  const videoTranscribeEndpoint = videoTranscribeEndpointInput.value.trim();
   let normalizedUrl = '';
   let normalizedHost = '';
 
@@ -1228,8 +1302,14 @@ async function handleLoadArticle() {
       setParseHint('已使用手动粘贴模式加载正文。', 'success');
       setStatus('手动内容加载成功。你可以开始查词和总结。', 'ok');
     } else if (mode === 'video') {
-      state.article = await fetchVideoTranscript(normalizedUrl, videoLangInput.value.trim() || 'en');
-      setParseHint('视频字幕提取成功。你可以像文章一样点击单词查词。', 'success');
+      state.article = await fetchVideoTranscript(normalizedUrl, videoLang, {
+        transcribeEndpoint: videoTranscribeEndpoint,
+      });
+      if ((state.article.siteName || '').includes('自动转写')) {
+        setParseHint('公开视频字幕不可用，已自动切换到音频转写。', 'success');
+      } else {
+        setParseHint('视频字幕提取成功。你可以像文章一样点击单词查词。', 'success');
+      }
       setStatus('视频脚本加载成功。你可以开始查词和总结。', 'ok');
     } else if (mode === 'bridge') {
       state.article = await fetchArticleViaBridge(normalizedUrl, bridgeEndpointInput.value.trim());
@@ -1237,8 +1317,14 @@ async function handleLoadArticle() {
       setStatus('本地桥接解析成功。你可以点击单词查词。', 'ok');
     } else {
       if (isYouTubeUrl) {
-        state.article = await fetchVideoTranscript(normalizedUrl, videoLangInput.value.trim() || 'en');
-        setParseHint('检测到 YouTube 链接，已自动使用视频字幕模式。', 'success');
+        state.article = await fetchVideoTranscript(normalizedUrl, videoLang, {
+          transcribeEndpoint: videoTranscribeEndpoint,
+        });
+        if ((state.article.siteName || '').includes('自动转写')) {
+          setParseHint('检测到 YouTube 链接，字幕不可用，已自动切换到音频转写。', 'success');
+        } else {
+          setParseHint('检测到 YouTube 链接，已自动使用视频字幕模式。', 'success');
+        }
         setStatus('视频脚本加载成功。你可以开始查词和总结。', 'ok');
       } else {
         state.article = await fetchArticleViaProxy(normalizedUrl);
@@ -1394,6 +1480,7 @@ function bindEvents() {
   aiModelInput.addEventListener('change', persist);
   bridgeEndpointInput.addEventListener('change', persist);
   videoLangInput.addEventListener('change', persist);
+  videoTranscribeEndpointInput.addEventListener('change', persist);
 }
 
 function init() {

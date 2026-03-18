@@ -103,8 +103,12 @@
             <span>字幕语言（YouTube 语言代码）</span>
             <input id="videoLangInput" type="text" value="en" autocomplete="off" />
           </label>
+          <label class="url-field" for="videoTranscribeEndpointInput">
+            <span>自动转写 Endpoint（可选）</span>
+            <input id="videoTranscribeEndpointInput" type="text" value="http://127.0.0.1:8790/transcribe" autocomplete="off" />
+          </label>
           <p class="helper-note">
-            目前优先支持 YouTube 链接（`youtube.com` / `youtu.be`）。若视频无公开字幕，请切换“手动粘贴”。
+            优先提取公开视频字幕；失败时会自动尝试调用转写 Endpoint（Whisper/OpenAI）进行音频转写。
           </p>
         </div>
         <p id="parseHint" class="parse-hint">

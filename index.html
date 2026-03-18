@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claw 导航站</title>
+    <meta
+      name="description"
+      content="面向 OpenClaw 用户的高质感导航站。支持关键词搜索、分类筛选、精选资源与来源聚合。"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb bg-orb-1" aria-hidden="true"></div>
+    <div class="bg-orb bg-orb-2" aria-hidden="true"></div>
+    <div class="bg-grid" aria-hidden="true"></div>
+
+    <main class="page">
+      <header class="hero panel">
+        <div class="hero-headline">
+          <span class="badge">实时更新 · Claw 导航</span>
+          <h1>OpenClaw 导航站</h1>
+          <p>
+            用更清晰的分类、更高效的检索和更舒服的视觉层级，替代传统“堆链接”式导航页。
+          </p>
+        </div>
+
+        <div class="stats" id="stats"></div>
+      </header>
+
+      <section class="panel controls" aria-label="筛选">
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M10.5 3a7.5 7.5 0 1 1 0 15 7.5 7.5 0 0 1 0-15Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Zm6.74 10.83 3.46 3.46-1.41 1.41-3.46-3.46 1.41-1.41Z"
+            />
+          </svg>
+          <input id="searchInput" type="text" placeholder="搜索关键词 / 来源 / 标签" />
+        </label>
+
+        <div class="chips-row">
+          <div class="chips" id="categoryChips"></div>
+          <button id="featuredBtn" class="chip chip-toggle" type="button">仅看精选</button>
+          <button id="resetBtn" class="chip chip-reset" type="button">重置</button>
+        </div>
+
+        <p class="result-tip">
+          共找到 <span id="resultCount">0</span> 条资源
+        </p>
+      </section>
+
+      <section class="spotlight-wrap">
+        <div class="section-head">
+          <h2>精选入口</h2>
+          <p>第一次访问建议先看这几条。</p>
+        </div>
+        <div id="spotlightGrid" class="spotlight-grid"></div>
+      </section>
+
+      <section id="categorySections" class="category-sections"></section>
+
+      <footer class="footer panel">
+        <h3>这个导航页是可持续维护的</h3>
+        <p>
+          你可以直接维护资源数据文件，按分类持续扩展。项目是纯静态结构，部署到任何静态托管都可以。
+        </p>
+        <a class="action" href="https://github.com/" target="_blank" rel="noopener noreferrer">去 GitHub 管理资源</a>
+      </footer>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

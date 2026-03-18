@@ -23,7 +23,7 @@ python3 -m http.server 5173
 仓库推送到 `main` 后会触发 Pages 工作流。
 
 - 工作流文件：`.github/workflows/deploy-pages.yml`
-- 预期地址：`https://guoxinling.github.io/clawtab/`
+- 预期地址：`https://guoxinling.github.io/readingtool/`
 
 如果第一次工作流失败，请在仓库设置里启用：
 

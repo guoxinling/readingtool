@@ -48,7 +48,7 @@ const saveSessionBtn = document.getElementById('saveSessionBtn');
 const playAudioBtn = document.getElementById('playAudioBtn');
 const wordLookupResult = document.getElementById('wordLookupResult');
 const favoriteList = document.getElementById('favoriteList');
-const clearFavoritesBtn = document.getElementById('clearFavoritesBtn');
+const exportFavoritesBtn = document.getElementById('exportFavoritesBtn');
 const vocabList = document.getElementById('vocabList');
 const exportVocabBtn = document.getElementById('exportVocabBtn');
 
@@ -785,6 +785,28 @@ function exportVocabCsv() {
   URL.revokeObjectURL(url);
 }
 
+function exportFavoritesCsv() {
+  const favorites = state.favorites.slice();
+  if (!favorites.length) {
+    alert('收藏为空，先在文章中收藏一句话或短语。');
+    return;
+  }
+
+  const header = ['text', 'articleTitle', 'createdAt'];
+  const rows = favorites.map((item) => [item.text, item.articleTitle || '', item.createdAt]);
+  const csv = [header, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell || '').replaceAll('"', '""')}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `favorites-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function saveSession() {
   if (!state.article) {
     alert('请先加载文章。');
@@ -959,13 +981,6 @@ function bindEvents() {
     renderFavorites();
   });
 
-  clearFavoritesBtn.addEventListener('click', () => {
-    if (!state.favorites.length) return;
-    state.favorites = [];
-    persist();
-    renderFavorites();
-  });
-
   vocabList.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
@@ -976,6 +991,7 @@ function bindEvents() {
     renderVocab();
   });
 
+  exportFavoritesBtn.addEventListener('click', exportFavoritesCsv);
   exportVocabBtn.addEventListener('click', exportVocabCsv);
 
   scoreSummaryBtn.addEventListener('click', async () => {

@@ -9,10 +9,12 @@ const STOP_WORDS = new Set([
 ]);
 const LOAD_MODE_LABEL = {
   proxy: '代理解析',
+  video: '视频字幕',
   manual: '手动粘贴',
   bridge: '本地桥接',
 };
-const DEFAULT_PARSE_HINT = '如果链接存在登录限制或付费墙（如 WSJ），可切换到“手动粘贴”或“本地桥接”模式。';
+const DEFAULT_PARSE_HINT =
+  '如果链接存在登录限制或付费墙（如 WSJ）或视频无公开字幕，可切换到“手动粘贴”或“本地桥接”模式。';
 
 const state = {
   article: null,
@@ -35,6 +37,8 @@ const manualTitleInput = document.getElementById('manualTitleInput');
 const manualTextInput = document.getElementById('manualTextInput');
 const bridgeModePanel = document.getElementById('bridgeModePanel');
 const bridgeEndpointInput = document.getElementById('bridgeEndpointInput');
+const videoModePanel = document.getElementById('videoModePanel');
+const videoLangInput = document.getElementById('videoLangInput');
 
 const articleTitle = document.getElementById('articleTitle');
 const articleInfo = document.getElementById('articleInfo');
@@ -90,6 +94,7 @@ function persist() {
       aiEndpoint: aiEndpointInput.value.trim(),
       aiModel: aiModelInput.value.trim(),
       bridgeEndpoint: bridgeEndpointInput.value.trim(),
+      videoLang: videoLangInput.value.trim() || 'en',
       loadMode: state.loadMode,
     })
   );
@@ -108,6 +113,7 @@ function loadPersistedState() {
     if (parsed.aiEndpoint) aiEndpointInput.value = parsed.aiEndpoint;
     if (parsed.aiModel) aiModelInput.value = parsed.aiModel;
     if (parsed.bridgeEndpoint) bridgeEndpointInput.value = parsed.bridgeEndpoint;
+    if (parsed.videoLang) videoLangInput.value = parsed.videoLang;
 
     if (parsed.loadMode && LOAD_MODE_LABEL[parsed.loadMode]) {
       state.loadMode = parsed.loadMode;
@@ -126,6 +132,7 @@ function setLoadMode(mode) {
 
   manualModePanel.classList.toggle('is-hidden', state.loadMode !== 'manual');
   bridgeModePanel.classList.toggle('is-hidden', state.loadMode !== 'bridge');
+  videoModePanel.classList.toggle('is-hidden', state.loadMode !== 'video');
 }
 
 function getLoadMode() {
@@ -457,6 +464,345 @@ async function fetchArticleViaBridge(url, endpoint) {
     text: payload.text,
     loadMode: 'bridge',
   });
+}
+
+async function fetchWithTimeout(url, init = {}, timeoutMs = 26000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error('timeout')), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function buildProxyUrl(sourceUrl, provider = 'allorigins') {
+  if (provider === 'allorigins') {
+    return `https://api.allorigins.win/raw?url=${encodeURIComponent(sourceUrl)}`;
+  }
+  return `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(sourceUrl)}`;
+}
+
+async function fetchTextViaProxy(sourceUrl, timeoutMs = 30000) {
+  const providers = ['allorigins', 'codetabs'];
+  let lastError = null;
+
+  for (const provider of providers) {
+    try {
+      const response = await fetchWithTimeout(buildProxyUrl(sourceUrl, provider), {}, timeoutMs);
+      if (!response.ok) {
+        throw new Error(`${provider} http ${response.status}`);
+      }
+      const text = await response.text();
+      if (!text.trim()) {
+        throw new Error(`${provider} empty payload`);
+      }
+      return text;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw createLoadError(`代理请求失败：${lastError?.message || 'unknown error'}`, 'VIDEO_PROXY_FAILED');
+}
+
+function extractYouTubeVideoId(rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return '';
+  }
+
+  const host = url.hostname.toLowerCase();
+  if (host === 'youtu.be') {
+    const id = url.pathname.split('/').filter(Boolean)[0] || '';
+    return /^[\w-]{11}$/.test(id) ? id : '';
+  }
+
+  if (!host.includes('youtube.com') && !host.includes('youtube-nocookie.com')) {
+    return '';
+  }
+
+  const directParam = url.searchParams.get('v');
+  if (directParam && /^[\w-]{11}$/.test(directParam)) {
+    return directParam;
+  }
+
+  const segments = url.pathname.split('/').filter(Boolean);
+  const marker = segments.findIndex((seg) => ['shorts', 'embed', 'live', 'v'].includes(seg));
+  if (marker >= 0 && segments[marker + 1] && /^[\w-]{11}$/.test(segments[marker + 1])) {
+    return segments[marker + 1];
+  }
+
+  return '';
+}
+
+function parseYouTubeCaptionTracks(html) {
+  const marker = '"captionTracks":[';
+  const start = html.indexOf(marker);
+  if (start < 0) return [];
+
+  const end = html.indexOf('],"audioTracks"', start);
+  if (end < 0) return [];
+
+  const jsonText = `{${html.slice(start, end + 1)}}`;
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    if (!Array.isArray(parsed.captionTracks)) return [];
+    return parsed.captionTracks
+      .map((track) => ({
+        baseUrl: typeof track.baseUrl === 'string' ? track.baseUrl : '',
+        languageCode: typeof track.languageCode === 'string' ? track.languageCode : '',
+        kind: typeof track.kind === 'string' ? track.kind : '',
+        name: track.name?.simpleText || '',
+      }))
+      .filter((track) => track.baseUrl);
+  } catch {
+    const fallback = [];
+    const trackReg =
+      /"baseUrl":"(https:\\\/\\\/www\.youtube\.com\\\/api\\\/timedtext[^"]+)".{0,480}?"languageCode":"([^"]+)"(?:.{0,180}?"kind":"([^"]+)")?/g;
+    let matched;
+
+    while ((matched = trackReg.exec(html))) {
+      fallback.push({
+        baseUrl: matched[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/'),
+        languageCode: matched[2] || '',
+        kind: matched[3] || '',
+        name: '',
+      });
+    }
+
+    return fallback;
+  }
+}
+
+function pickYouTubeCaptionTrack(tracks, preferredLang = 'en') {
+  if (!tracks.length) return null;
+  const target = (preferredLang || 'en').toLowerCase();
+
+  const scoreTrack = (track) => {
+    const lang = (track.languageCode || '').toLowerCase();
+    const isAsr = track.kind === 'asr';
+    if (lang === target && !isAsr) return 100;
+    if (lang === target && isAsr) return 96;
+    if (lang.startsWith(`${target}-`) && !isAsr) return 94;
+    if (lang.startsWith(`${target}-`) && isAsr) return 90;
+    if (lang === 'en' && !isAsr) return 80;
+    if (lang === 'en' && isAsr) return 75;
+    if (!isAsr) return 60;
+    return 50;
+  };
+
+  return tracks
+    .slice()
+    .sort((a, b) => scoreTrack(b) - scoreTrack(a))[0];
+}
+
+function decodeHtmlEntities(text) {
+  const box = document.createElement('textarea');
+  box.innerHTML = text;
+  return box.value;
+}
+
+function mergeTranscriptLines(lines) {
+  const cleaned = [];
+
+  lines.forEach((line) => {
+    const normalized = normalizeSelection(line).replace(/\[[^\]]+\]/g, '').trim();
+    if (!normalized) return;
+    if (cleaned.length && cleaned[cleaned.length - 1].toLowerCase() === normalized.toLowerCase()) return;
+    cleaned.push(normalized);
+  });
+
+  if (!cleaned.length) return '';
+
+  const paragraphs = [];
+  let buffer = '';
+
+  cleaned.forEach((line) => {
+    const next = buffer ? `${buffer} ${line}` : line;
+    if (next.length > 280) {
+      if (buffer) paragraphs.push(buffer);
+      buffer = line;
+    } else {
+      buffer = next;
+    }
+  });
+
+  if (buffer) paragraphs.push(buffer);
+  return paragraphs.join('\n\n');
+}
+
+function parseTranscriptXmlToText(xmlText) {
+  const xml = new DOMParser().parseFromString(xmlText, 'text/xml');
+  const nodes = Array.from(xml.querySelectorAll('text'));
+  if (!nodes.length) return '';
+
+  const lines = nodes
+    .map((node) => decodeHtmlEntities(node.textContent || ''))
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  return mergeTranscriptLines(lines);
+}
+
+function cleanupSubtitleText(rawText) {
+  const normalized = rawText.replace(/\r\n?/g, '\n');
+  const withoutHeader = normalized.replace(/^WEBVTT[^\n]*\n+/i, '');
+  const withoutTimestamp = withoutHeader
+    .replace(/^\d+\s*$/gm, '')
+    .replace(
+      /^\d{1,2}:\d{2}(?::\d{2})?[.,]\d{1,3}\s*-->\s*\d{1,2}:\d{2}(?::\d{2})?[.,]\d{1,3}.*$/gm,
+      ''
+    )
+    .replace(/<[^>]+>/g, '')
+    .replace(/\n{3,}/g, '\n\n');
+
+  return mergeTranscriptLines(
+    withoutTimestamp
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+  );
+}
+
+function extractYouTubeTitle(html, videoId) {
+  const dom = new DOMParser().parseFromString(html, 'text/html');
+  const title = (dom.querySelector('title')?.textContent || '').trim();
+  if (!title) return `YouTube Video ${videoId}`;
+  return title.replace(/\s*-\s*YouTube\s*$/i, '').trim();
+}
+
+function isLikelyBlockedPayload(text) {
+  const lower = text.toLowerCase();
+  return (
+    lower.includes('<title>sorry') ||
+    lower.includes('our systems have detected unusual traffic') ||
+    lower.includes('to continue, please type the characters') ||
+    lower.includes('captcha')
+  );
+}
+
+function buildSimpleTimedtextUrl(videoId, lang = 'en', kind = '') {
+  const params = new URLSearchParams({
+    v: videoId,
+    lang: lang || 'en',
+    fmt: 'srv3',
+  });
+  if (kind === 'asr') params.set('kind', 'asr');
+  return `https://www.youtube.com/api/timedtext?${params.toString()}`;
+}
+
+async function fetchTextDirectOrProxy(url, timeoutMs = 30000) {
+  try {
+    const direct = await fetchWithTimeout(url, {}, timeoutMs);
+    if (direct.ok) {
+      const text = await direct.text();
+      if (text.trim() && !isLikelyBlockedPayload(text)) {
+        return text;
+      }
+    }
+  } catch {
+    // Continue with proxy fallback.
+  }
+
+  return fetchTextViaProxy(url, timeoutMs);
+}
+
+async function fetchYouTubeTranscript(url, preferredLang = 'en') {
+  const videoId = extractYouTubeVideoId(url);
+  if (!videoId) {
+    throw createLoadError('不是有效的 YouTube 视频链接。', 'VIDEO_URL_INVALID');
+  }
+
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const watchHtml = await fetchTextViaProxy(watchUrl, 35000);
+  const tracks = parseYouTubeCaptionTracks(watchHtml);
+
+  if (!tracks.length) {
+    throw createLoadError(
+      '未找到可用字幕轨道。该视频可能关闭了字幕或被平台限制。',
+      'VIDEO_CAPTION_TRACK_MISSING',
+      '请换一个带字幕的视频，或切换到“手动粘贴”模式。'
+    );
+  }
+
+  const chosen = pickYouTubeCaptionTrack(tracks, preferredLang) || tracks[0];
+  const subtitleCandidates = [];
+  let signedSubtitleUrl = chosen.baseUrl;
+  if (!/[?&]fmt=/.test(signedSubtitleUrl)) {
+    signedSubtitleUrl += '&fmt=srv3';
+  }
+  subtitleCandidates.push(signedSubtitleUrl);
+  subtitleCandidates.push(buildSimpleTimedtextUrl(videoId, chosen.languageCode || preferredLang, chosen.kind));
+  if ((chosen.languageCode || '').toLowerCase() !== (preferredLang || 'en').toLowerCase()) {
+    subtitleCandidates.push(buildSimpleTimedtextUrl(videoId, preferredLang || 'en', ''));
+    subtitleCandidates.push(buildSimpleTimedtextUrl(videoId, preferredLang || 'en', 'asr'));
+  }
+
+  let transcriptText = '';
+  for (const subtitleUrl of subtitleCandidates) {
+    try {
+      const subtitleXml = await fetchTextDirectOrProxy(subtitleUrl, 35000);
+      if (!subtitleXml.trim() || isLikelyBlockedPayload(subtitleXml)) continue;
+      transcriptText = parseTranscriptXmlToText(subtitleXml);
+      if (transcriptText.length >= 120) break;
+    } catch {
+      // Try next subtitle candidate.
+    }
+  }
+
+  const text = transcriptText;
+  if (!text || text.length < 120) {
+    throw createLoadError(
+      '字幕提取失败或内容过少。',
+      'VIDEO_TRANSCRIPT_EMPTY',
+      '该视频可能没有公开字幕。请切换“手动粘贴”继续学习。'
+    );
+  }
+
+  return buildArticleFromText({
+    url: watchUrl,
+    title: extractYouTubeTitle(watchHtml, videoId),
+    siteName: `YouTube · ${chosen.languageCode || preferredLang}${chosen.kind === 'asr' ? ' (自动字幕)' : ''}`,
+    text,
+    loadMode: 'video',
+  });
+}
+
+async function fetchSubtitleFileText(url) {
+  const raw = await fetchTextViaProxy(url, 30000);
+  return cleanupSubtitleText(raw);
+}
+
+async function fetchVideoTranscript(url, preferredLang = 'en') {
+  const host = getHostnameFromUrl(url).toLowerCase();
+  const isYouTube = host === 'youtu.be' || host.includes('youtube.com') || host.includes('youtube-nocookie.com');
+  if (isYouTube) {
+    return fetchYouTubeTranscript(url, preferredLang);
+  }
+
+  if (/\.(vtt|srt|txt)([?#].*)?$/i.test(url)) {
+    const text = await fetchSubtitleFileText(url);
+    if (!text || text.length < 120) {
+      throw createLoadError('字幕文件解析结果过短。', 'SUBTITLE_TOO_SHORT');
+    }
+    return buildArticleFromText({
+      url,
+      title: '视频字幕文件',
+      siteName: getHostnameFromUrl(url) || '字幕文件',
+      text,
+      loadMode: 'video',
+    });
+  }
+
+  throw createLoadError(
+    '当前仅支持 YouTube 视频链接，或可直接访问的 .srt/.vtt/.txt 字幕文件链接。',
+    'VIDEO_UNSUPPORTED',
+    '你可以换成 YouTube 链接，或把脚本粘贴到“手动粘贴”模式。'
+  );
 }
 
 function shrinkText(text, max = 120) {
@@ -864,6 +1210,8 @@ async function handleLoadArticle() {
   setStatus(
     mode === 'manual'
       ? '正在载入手动粘贴内容...'
+      : mode === 'video'
+        ? '正在提取视频字幕...'
       : mode === 'bridge'
         ? '正在通过本地桥接抓取文章...'
         : '正在通过代理抓取并解析文章...'
@@ -875,6 +1223,10 @@ async function handleLoadArticle() {
       state.article = buildArticleFromManual(manualTitleInput.value.trim(), manualTextInput.value, normalizedUrl);
       setParseHint('已使用手动粘贴模式加载正文。', 'success');
       setStatus('手动内容加载成功。你可以开始查词和总结。', 'ok');
+    } else if (mode === 'video') {
+      state.article = await fetchVideoTranscript(normalizedUrl, videoLangInput.value.trim() || 'en');
+      setParseHint('视频字幕提取成功。你可以像文章一样点击单词查词。', 'success');
+      setStatus('视频脚本加载成功。你可以开始查词和总结。', 'ok');
     } else if (mode === 'bridge') {
       state.article = await fetchArticleViaBridge(normalizedUrl, bridgeEndpointInput.value.trim());
       setParseHint('已通过本地桥接模式加载正文。', 'success');
@@ -1031,6 +1383,7 @@ function bindEvents() {
   aiEndpointInput.addEventListener('change', persist);
   aiModelInput.addEventListener('change', persist);
   bridgeEndpointInput.addEventListener('change', persist);
+  videoLangInput.addEventListener('change', persist);
 }
 
 function init() {

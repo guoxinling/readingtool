@@ -67,6 +67,10 @@
             <span>代理解析</span>
           </label>
           <label class="mode-pill">
+            <input type="radio" name="loadMode" value="video" />
+            <span>视频字幕</span>
+          </label>
+          <label class="mode-pill">
             <input type="radio" name="loadMode" value="manual" />
             <span>手动粘贴</span>
           </label>
@@ -94,8 +98,17 @@
             需要本地运行 Playwright 桥接服务，用你登录过的网站会话抓取正文。
           </p>
         </div>
+        <div id="videoModePanel" class="mode-panel is-hidden">
+          <label class="url-field" for="videoLangInput">
+            <span>字幕语言（YouTube 语言代码）</span>
+            <input id="videoLangInput" type="text" value="en" autocomplete="off" />
+          </label>
+          <p class="helper-note">
+            目前优先支持 YouTube 链接（`youtube.com` / `youtu.be`）。若视频无公开字幕，请切换“手动粘贴”。
+          </p>
+        </div>
         <p id="parseHint" class="parse-hint">
-          如果链接存在登录限制或付费墙（如 WSJ），可切换到“手动粘贴”或“本地桥接”模式。
+          如果链接存在登录限制、付费墙（如 WSJ）或视频无公开字幕，可切换到“手动粘贴”或“本地桥接”模式。
         </p>
         <p id="loadStatus" class="status">等待输入链接...</p>
       </section>

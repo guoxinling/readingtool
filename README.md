@@ -1,4 +1,4 @@
-# Claw Study Lab
+# English Study Hub
 
 一个纯前端学习工具，聚焦你提出的 6 个核心需求：
 

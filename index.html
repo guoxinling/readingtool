@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Claw Study Lab</title>
+    <title>English Study Hub</title>
     <meta
       name="description"
       content="一站式英语学习工具：查词、收藏句子、AI 总结评分、词汇导出、历史记录、链接文章自动解析。"
@@ -19,21 +19,32 @@
       <header class="hero panel">
         <div>
           <span class="badge">Study Workflow in One Page</span>
-          <h1>Claw Study Lab</h1>
+          <h1>English Study Hub</h1>
           <p>
             贴入英文文章链接即可开始学习。支持点击查词（音标/发音/英英释义/例句）、收藏句子、用自己的话总结并评分、词汇导出、历史记录追踪。
           </p>
         </div>
-        <div class="hero-note">
-          <h2>你的 6 个需求都在这里</h2>
-          <ul>
-            <li>查词：音标、发音、释义、例句</li>
-            <li>句子/短语收藏</li>
-            <li>总结评分 + 修改建议</li>
-            <li>词汇导出 CSV</li>
-            <li>历史学习记录</li>
-            <li>粘贴链接自动解析文章</li>
-          </ul>
+        <div class="hero-art" aria-hidden="true">
+          <svg viewBox="0 0 360 240" fill="none">
+            <path
+              d="M18 145C48 112 82 106 113 126C136 141 153 170 184 170C222 170 236 132 264 113C288 97 319 100 342 122"
+              class="sketch-line"
+            />
+            <path
+              d="M36 78C53 56 79 42 107 44C138 47 163 68 188 88C214 107 243 123 274 120C301 117 326 100 340 76"
+              class="sketch-line thin"
+            />
+            <path
+              d="M70 196C106 211 151 208 183 188C212 171 236 141 268 131C296 122 328 128 346 149"
+              class="sketch-line thin"
+            />
+            <circle cx="76" cy="68" r="31" class="sketch-circle" />
+            <circle cx="286" cy="169" r="38" class="sketch-circle" />
+            <path d="M116 55L139 79L156 48" class="sketch-mark" />
+            <path d="M245 170L266 194L286 162" class="sketch-mark" />
+            <path d="M187 32V56" class="sketch-mark thin" />
+            <path d="M175 44H199" class="sketch-mark thin" />
+          </svg>
         </div>
       </header>
 
@@ -62,7 +73,6 @@
               <p id="articleInfo" class="meta-info">加载后会显示文章来源、字数和解析结果。</p>
             </div>
             <div class="article-actions">
-              <button id="saveSelectionBtn" type="button" class="btn">收藏选中句子/短语</button>
               <button id="saveSessionBtn" type="button" class="btn">保存本次学习记录</button>
             </div>
           </article>
@@ -71,6 +81,10 @@
             <h3>文章内容（可点击单词查词）</h3>
             <div id="articleContent" class="article-content">
               <p class="empty-note">加载文章后，这里会显示可点击查词的正文内容。</p>
+            </div>
+            <div id="selectionBar" class="selection-bar is-hidden">
+              <p id="selectionPreview" class="selection-preview"></p>
+              <button id="collectSelectionBtn" type="button" class="btn btn-primary small">收藏选中内容</button>
             </div>
           </article>
         </section>

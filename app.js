@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'claw-study-lab-v1';
+const STORAGE_KEY = 'english-study-hub-v1';
 const STOP_WORDS = new Set([
   'about', 'after', 'again', 'against', 'almost', 'along', 'also', 'although', 'always', 'among',
   'because', 'before', 'being', 'between', 'both', 'could', 'every', 'first', 'from', 'have',
@@ -15,6 +15,7 @@ const state = {
   history: [],
   lastAudio: null,
   lastScore: null,
+  pendingSelection: '',
 };
 
 const articleUrlInput = document.getElementById('articleUrlInput');
@@ -24,8 +25,10 @@ const loadStatus = document.getElementById('loadStatus');
 const articleTitle = document.getElementById('articleTitle');
 const articleInfo = document.getElementById('articleInfo');
 const articleContent = document.getElementById('articleContent');
+const selectionBar = document.getElementById('selectionBar');
+const selectionPreview = document.getElementById('selectionPreview');
+const collectSelectionBtn = document.getElementById('collectSelectionBtn');
 
-const saveSelectionBtn = document.getElementById('saveSelectionBtn');
 const saveSessionBtn = document.getElementById('saveSessionBtn');
 
 const playAudioBtn = document.getElementById('playAudioBtn');
@@ -174,7 +177,7 @@ function buildClickableParagraph(text) {
     .map((chunk) => {
       if (/^[A-Za-z]+(?:['-][A-Za-z]+)*$/.test(chunk)) {
         const normalized = chunk.toLowerCase();
-        return `<button type="button" class="word-chip" data-word="${normalized}">${escapeHtml(chunk)}</button>`;
+        return `<span class="word-chip" data-word="${normalized}">${escapeHtml(chunk)}</span>`;
       }
       return escapeHtml(chunk);
     })
@@ -182,6 +185,8 @@ function buildClickableParagraph(text) {
 }
 
 function renderArticle() {
+  setPendingSelection('');
+
   if (!state.article) {
     articleTitle.textContent = '未加载';
     articleInfo.textContent = '加载后会显示文章来源、字数和解析结果。';
@@ -251,8 +256,42 @@ async function fetchArticle(url) {
   };
 }
 
-function getSelectedText() {
-  return window.getSelection ? window.getSelection().toString().trim() : '';
+function shrinkText(text, max = 120) {
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}...`;
+}
+
+function normalizeSelection(text) {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function getSelectedTextInArticle() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return '';
+
+  const range = selection.getRangeAt(0);
+  if (range.collapsed) return '';
+
+  const containerNode = range.commonAncestorContainer;
+  const container = containerNode.nodeType === Node.ELEMENT_NODE ? containerNode : containerNode.parentElement;
+  if (!(container instanceof Element)) return '';
+  if (!articleContent.contains(container)) return '';
+
+  return normalizeSelection(selection.toString());
+}
+
+function setPendingSelection(text = '') {
+  const normalized = normalizeSelection(text);
+  state.pendingSelection = normalized;
+
+  if (!normalized || normalized.length < 2) {
+    selectionBar.classList.add('is-hidden');
+    selectionPreview.textContent = '';
+    return;
+  }
+
+  selectionPreview.textContent = `已选中：${shrinkText(normalized)}`;
+  selectionBar.classList.remove('is-hidden');
 }
 
 function addFavorite(text) {
@@ -619,20 +658,36 @@ function bindEvents() {
   });
 
   articleContent.addEventListener('click', (event) => {
+    const selectedText = getSelectedTextInArticle();
+    if (selectedText.length > 1) {
+      setPendingSelection(selectedText);
+      return;
+    }
+
     const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    const word = target.dataset.word;
+    if (!(target instanceof Element)) return;
+    const chip = target.closest('.word-chip');
+    if (!(chip instanceof HTMLElement)) return;
+    const word = chip.dataset.word;
     if (!word) return;
     lookupWord(word);
   });
 
-  saveSelectionBtn.addEventListener('click', () => {
-    const selected = getSelectedText();
+  document.addEventListener('selectionchange', () => {
+    const selected = getSelectedTextInArticle();
+    setPendingSelection(selected);
+  });
+
+  collectSelectionBtn.addEventListener('click', () => {
+    const selected = state.pendingSelection || getSelectedTextInArticle();
     if (!selected || selected.length < 2) {
       alert('请先在文章区域选中一句话或短语。');
       return;
     }
     addFavorite(selected);
+    setPendingSelection('');
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
   });
 
   saveSessionBtn.addEventListener('click', saveSession);

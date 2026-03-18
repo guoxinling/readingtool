@@ -92,7 +92,6 @@ body {
 }
 
 .hero h1,
-.hero-note h2,
 .article-content-wrap h3,
 .side-card h3 {
   margin: 0;
@@ -123,22 +122,53 @@ body {
   background: linear-gradient(135deg, #dcf8f0, #eafaf6);
 }
 
-.hero-note {
+.hero-art {
   border-radius: 16px;
   border: 1px solid #d7e6df;
-  background: rgba(255, 255, 255, 0.88);
-  padding: 14px 16px;
+  background:
+    radial-gradient(circle at 72% 28%, rgba(29, 156, 132, 0.18), transparent 44%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(244, 252, 249, 0.92));
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  padding: 8px;
 }
 
-.hero-note h2 {
-  font-size: 24px;
+.hero-art svg {
+  width: 100%;
+  height: 100%;
 }
 
-.hero-note ul {
-  margin: 10px 0 0;
-  padding-left: 18px;
-  color: #4a5a60;
-  line-height: 1.7;
+.hero-art .sketch-line {
+  stroke: #0d7e6f;
+  stroke-width: 4.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 3 7;
+}
+
+.hero-art .sketch-line.thin {
+  stroke: #155e75;
+  stroke-width: 3;
+  stroke-dasharray: 2 8;
+}
+
+.hero-art .sketch-circle {
+  fill: rgba(31, 157, 133, 0.1);
+  stroke: rgba(13, 126, 111, 0.84);
+  stroke-width: 2.4;
+  stroke-dasharray: 2 6;
+}
+
+.hero-art .sketch-mark {
+  stroke: #0f3a4a;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hero-art .sketch-mark.thin {
+  stroke-width: 2.4;
 }
 
 .loader {
@@ -319,14 +349,39 @@ body {
   font-size: 16px;
 }
 
+.selection-bar {
+  margin-top: 8px;
+  border-radius: 12px;
+  border: 1px solid #b7d8d0;
+  background: linear-gradient(135deg, #ebf9f3, #f4fbf8);
+  padding: 8px 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selection-bar.is-hidden {
+  display: none;
+}
+
+.selection-preview {
+  margin: 0;
+  font-size: 13px;
+  color: #285661;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .word-chip {
-  border: 0;
-  padding: 0 2px;
+  padding: 0 1px;
   margin: 0;
   border-radius: 4px;
-  background: transparent;
   color: #0c5f95;
   font: inherit;
+  display: inline;
+  user-select: text;
+  -webkit-user-select: text;
   cursor: pointer;
   font-weight: 700;
 }
@@ -571,10 +626,13 @@ body {
     font-size: 34px;
   }
 
-  .hero-note h2,
   .article-content-wrap h3,
   .side-card h3 {
     font-size: 22px;
+  }
+
+  .hero-art {
+    min-height: 170px;
   }
 
   .loader-row {

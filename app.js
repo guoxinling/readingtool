@@ -1185,6 +1185,7 @@ async function handleLoadArticle() {
   state.loadMode = mode;
   const url = articleUrlInput.value.trim();
   let normalizedUrl = '';
+  let normalizedHost = '';
 
   if (mode !== 'manual' && !url) {
     setStatus('请输入文章链接。', 'error');
@@ -1194,6 +1195,7 @@ async function handleLoadArticle() {
   if (url && mode !== 'manual') {
     try {
       normalizedUrl = new URL(url).toString();
+      normalizedHost = getHostnameFromUrl(normalizedUrl).toLowerCase();
     } catch {
       setStatus('链接格式不正确。', 'error');
       return;
@@ -1207,6 +1209,8 @@ async function handleLoadArticle() {
   }
 
   loadArticleBtn.disabled = true;
+  const isYouTubeUrl =
+    normalizedHost === 'youtu.be' || normalizedHost.includes('youtube.com') || normalizedHost.includes('youtube-nocookie.com');
   setStatus(
     mode === 'manual'
       ? '正在载入手动粘贴内容...'
@@ -1232,9 +1236,15 @@ async function handleLoadArticle() {
       setParseHint('已通过本地桥接模式加载正文。', 'success');
       setStatus('本地桥接解析成功。你可以点击单词查词。', 'ok');
     } else {
-      state.article = await fetchArticleViaProxy(normalizedUrl);
-      setParseHint('代理解析成功。遇到受限站点时可切换到“手动粘贴”或“本地桥接”。', 'success');
-      setStatus('文章解析成功。你可以点击单词查词。', 'ok');
+      if (isYouTubeUrl) {
+        state.article = await fetchVideoTranscript(normalizedUrl, videoLangInput.value.trim() || 'en');
+        setParseHint('检测到 YouTube 链接，已自动使用视频字幕模式。', 'success');
+        setStatus('视频脚本加载成功。你可以开始查词和总结。', 'ok');
+      } else {
+        state.article = await fetchArticleViaProxy(normalizedUrl);
+        setParseHint('代理解析成功。遇到受限站点时可切换到“手动粘贴”或“本地桥接”。', 'success');
+        setStatus('文章解析成功。你可以点击单词查词。', 'ok');
+      }
     }
 
     renderArticle();

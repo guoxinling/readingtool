@@ -18,6 +18,44 @@ python3 -m http.server 5173
 
 打开 [http://localhost:5173](http://localhost:5173)
 
+## 文章导入模式
+
+页面支持 3 种导入方式：
+
+- `代理解析`：默认模式，直接抓取公开网页并自动抽取正文。
+- `手动粘贴`：复制文章正文到页面后加载，适合付费墙或登录内容。
+- `本地桥接`：通过本机 Playwright 浏览器会话抓取正文，适合 WSJ 等站点。
+
+> 说明：WSJ / FT / NYT 这类站点常有登录、订阅和反爬限制，默认代理模式可能拿不到正文。
+
+## 本地桥接（可选）
+
+先安装依赖：
+
+```bash
+cd /Users/guoxl/Documents/Playground/claw-nav-site
+npm i -D playwright
+npx playwright install chromium
+```
+
+启动桥接服务：
+
+```bash
+HEADED=1 node tools/playwright-bridge.mjs --port 8787
+```
+
+然后在页面里切换到 `本地桥接` 模式，Endpoint 填：
+
+```text
+http://127.0.0.1:8787/extract
+```
+
+首次使用可先访问登录引导接口（浏览器打开目标站）：
+
+```text
+http://127.0.0.1:8787/open?url=https://www.wsj.com/
+```
+
 ## GitHub Pages
 
 仓库推送到 `main` 后会触发 Pages 工作流。

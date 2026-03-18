@@ -61,6 +61,42 @@
           </label>
           <button id="loadArticleBtn" type="button" class="btn btn-primary">加载文章</button>
         </div>
+        <div class="mode-switch" role="radiogroup" aria-label="解析模式">
+          <label class="mode-pill">
+            <input type="radio" name="loadMode" value="proxy" checked />
+            <span>代理解析</span>
+          </label>
+          <label class="mode-pill">
+            <input type="radio" name="loadMode" value="manual" />
+            <span>手动粘贴</span>
+          </label>
+          <label class="mode-pill">
+            <input type="radio" name="loadMode" value="bridge" />
+            <span>本地桥接</span>
+          </label>
+        </div>
+        <div id="manualModePanel" class="mode-panel is-hidden">
+          <label class="url-field" for="manualTitleInput">
+            <span>文章标题（可选）</span>
+            <input id="manualTitleInput" type="text" placeholder="例如：Powell's Meeting and Fed Division" autocomplete="off" />
+          </label>
+          <label class="manual-text-field" for="manualTextInput">
+            <span>粘贴正文（必填）</span>
+            <textarea id="manualTextInput" rows="7" placeholder="把文章正文粘贴到这里，再点击“加载文章”。"></textarea>
+          </label>
+        </div>
+        <div id="bridgeModePanel" class="mode-panel is-hidden">
+          <label class="url-field" for="bridgeEndpointInput">
+            <span>本地桥接 Endpoint</span>
+            <input id="bridgeEndpointInput" type="text" value="http://127.0.0.1:8787/extract" autocomplete="off" />
+          </label>
+          <p class="helper-note">
+            需要本地运行 Playwright 桥接服务，用你登录过的网站会话抓取正文。
+          </p>
+        </div>
+        <p id="parseHint" class="parse-hint">
+          如果链接存在登录限制或付费墙（如 WSJ），可切换到“手动粘贴”或“本地桥接”模式。
+        </p>
         <p id="loadStatus" class="status">等待输入链接...</p>
       </section>
 

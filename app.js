@@ -7,6 +7,12 @@ const STOP_WORDS = new Set([
   'what', 'when', 'where', 'which', 'while', 'with', 'would', 'your', 'into', 'onto', 'been',
   'them', 'then', 'some', 'each', 'like', 'only', 'make', 'made', 'does', 'did', 'much', 'well'
 ]);
+const LOAD_MODE_LABEL = {
+  proxy: '代理解析',
+  manual: '手动粘贴',
+  bridge: '本地桥接',
+};
+const DEFAULT_PARSE_HINT = '如果链接存在登录限制或付费墙（如 WSJ），可切换到“手动粘贴”或“本地桥接”模式。';
 
 const state = {
   article: null,
@@ -16,11 +22,19 @@ const state = {
   lastAudio: null,
   lastScore: null,
   pendingSelection: '',
+  loadMode: 'proxy',
 };
 
 const articleUrlInput = document.getElementById('articleUrlInput');
 const loadArticleBtn = document.getElementById('loadArticleBtn');
 const loadStatus = document.getElementById('loadStatus');
+const parseHint = document.getElementById('parseHint');
+const loadModeInputs = Array.from(document.querySelectorAll('input[name="loadMode"]'));
+const manualModePanel = document.getElementById('manualModePanel');
+const manualTitleInput = document.getElementById('manualTitleInput');
+const manualTextInput = document.getElementById('manualTextInput');
+const bridgeModePanel = document.getElementById('bridgeModePanel');
+const bridgeEndpointInput = document.getElementById('bridgeEndpointInput');
 
 const articleTitle = document.getElementById('articleTitle');
 const articleInfo = document.getElementById('articleInfo');
@@ -61,6 +75,11 @@ function setStatus(message, type = '') {
   loadStatus.className = `status ${type}`.trim();
 }
 
+function setParseHint(message, type = '') {
+  parseHint.textContent = message || DEFAULT_PARSE_HINT;
+  parseHint.className = `parse-hint ${type}`.trim();
+}
+
 function persist() {
   localStorage.setItem(
     STORAGE_KEY,
@@ -70,6 +89,8 @@ function persist() {
       history: state.history,
       aiEndpoint: aiEndpointInput.value.trim(),
       aiModel: aiModelInput.value.trim(),
+      bridgeEndpoint: bridgeEndpointInput.value.trim(),
+      loadMode: state.loadMode,
     })
   );
 }
@@ -86,9 +107,30 @@ function loadPersistedState() {
 
     if (parsed.aiEndpoint) aiEndpointInput.value = parsed.aiEndpoint;
     if (parsed.aiModel) aiModelInput.value = parsed.aiModel;
+    if (parsed.bridgeEndpoint) bridgeEndpointInput.value = parsed.bridgeEndpoint;
+
+    if (parsed.loadMode && LOAD_MODE_LABEL[parsed.loadMode]) {
+      state.loadMode = parsed.loadMode;
+    }
   } catch {
     // Ignore corrupted local state.
   }
+}
+
+function setLoadMode(mode) {
+  state.loadMode = LOAD_MODE_LABEL[mode] ? mode : 'proxy';
+
+  loadModeInputs.forEach((input) => {
+    input.checked = input.value === state.loadMode;
+  });
+
+  manualModePanel.classList.toggle('is-hidden', state.loadMode !== 'manual');
+  bridgeModePanel.classList.toggle('is-hidden', state.loadMode !== 'bridge');
+}
+
+function getLoadMode() {
+  const checked = loadModeInputs.find((input) => input.checked);
+  return checked && LOAD_MODE_LABEL[checked.value] ? checked.value : 'proxy';
 }
 
 function renderFavorites() {
@@ -195,7 +237,8 @@ function renderArticle() {
   }
 
   articleTitle.textContent = state.article.title || '未命名文章';
-  articleInfo.textContent = `${state.article.siteName || '未知来源'} · ${state.article.wordCount} 词 · ${state.article.paragraphs.length} 段`;
+  const modeLabel = LOAD_MODE_LABEL[state.article.loadMode] || '未知模式';
+  articleInfo.textContent = `${state.article.siteName || '未知来源'} · ${state.article.wordCount} 词 · ${state.article.paragraphs.length} 段 · ${modeLabel}`;
 
   articleContent.innerHTML = state.article.paragraphs
     .map((p) => `<p>${buildClickableParagraph(p)}</p>`)
@@ -203,14 +246,112 @@ function renderArticle() {
 }
 
 function normalizeParagraphs(text) {
-  return text
+  const normalized = text
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  if (!normalized) return [];
+
+  const blocks = normalized
     .split(/\n{2,}/)
     .map((line) => line.trim())
-    .filter((line) => line.length > 40)
+    .filter((line) => line.length > 30);
+  if (blocks.length >= 2) return blocks.slice(0, 120);
+
+  return normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 45)
     .slice(0, 120);
 }
 
-async function fetchArticle(url) {
+function countEnglishWords(text) {
+  return (text.match(/[A-Za-z]+/g) || []).length;
+}
+
+function createLoadError(message, code = 'LOAD_FAILED', hint = '') {
+  const error = new Error(message);
+  error.code = code;
+  error.hint = hint;
+  return error;
+}
+
+function getHostnameFromUrl(url) {
+  if (!url) return '';
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '');
+  } catch {
+    return '';
+  }
+}
+
+function buildArticleFromText({ url = '', title = '', siteName = '', text = '', loadMode = 'proxy' }) {
+  const normalizedText = text
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  const paragraphs = normalizeParagraphs(normalizedText);
+
+  if (!paragraphs.length || normalizedText.length < 120) {
+    throw createLoadError('正文内容太少，无法用于学习。请换链接或改用手动粘贴模式。', 'TEXT_TOO_SHORT');
+  }
+
+  const fallbackTitle = title || getHostnameFromUrl(url) || '未命名文章';
+
+  return {
+    url,
+    title: fallbackTitle,
+    siteName: siteName || getHostnameFromUrl(url) || '手动输入',
+    text: normalizedText,
+    paragraphs,
+    wordCount: countEnglishWords(normalizedText),
+    loadMode,
+    loadedAt: new Date().toISOString(),
+  };
+}
+
+function detectBlockedOrPaywall(url, html, parsed, textContent, paragraphs) {
+  const host = getHostnameFromUrl(url).toLowerCase();
+  const lower = `${html.slice(0, 180000)}\n${parsed?.excerpt || ''}\n${textContent.slice(0, 6000)}`.toLowerCase();
+  const hasPaywallMarker = [
+    'paywall',
+    'subscription',
+    'subscribe',
+    'sign in',
+    'log in',
+    'access denied',
+    'captcha',
+    'for subscribers',
+    'member-only',
+  ].some((keyword) => lower.includes(keyword));
+  const wsjNotFoundShell =
+    host.includes('wsj.com') && (lower.includes('"/not-found"') || lower.includes('"errorcode":"404"'));
+  const wordCount = countEnglishWords(textContent);
+  const tooShort = wordCount < 140 || paragraphs.length < 2;
+  const heavyShell = html.length > 45000 && wordCount < 120;
+
+  if (wsjNotFoundShell) {
+    return {
+      blocked: true,
+      reason: '检测到站点返回的是受限壳页面（常见于 WSJ 未登录或反爬限制）。',
+    };
+  }
+
+  if ((hasPaywallMarker && tooShort) || heavyShell) {
+    return {
+      blocked: true,
+      reason: '检测到登录/订阅限制，代理拿到的不是完整正文。',
+    };
+  }
+
+  return { blocked: false, reason: '' };
+}
+
+async function fetchArticleViaProxy(url) {
   const proxyUrl = `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`;
   const response = await fetch(proxyUrl, {
     headers: {
@@ -219,7 +360,7 @@ async function fetchArticle(url) {
   });
 
   if (!response.ok) {
-    throw new Error(`抓取失败（${response.status}）`);
+    throw createLoadError(`抓取失败（${response.status}）。`, 'PROXY_HTTP_ERROR');
   }
 
   const html = await response.text();
@@ -237,23 +378,85 @@ async function fetchArticle(url) {
   const title = parsed?.title || dom.title || url;
   const textContent = (parsed?.textContent || dom.body?.innerText || '').replace(/\s+\n/g, '\n').trim();
   const paragraphs = normalizeParagraphs(textContent);
+  const gateCheck = detectBlockedOrPaywall(url, html, parsed, textContent, paragraphs);
 
-  if (!paragraphs.length) {
-    throw new Error('未能解析到正文内容，请换一个文章链接。');
+  if (gateCheck.blocked) {
+    throw createLoadError(
+      `代理解析失败：${gateCheck.reason}`,
+      'PAYWALL_OR_GATE',
+      '请切换到“手动粘贴”或“本地桥接”模式继续学习。'
+    );
   }
 
-  const siteName = parsed?.siteName || new URL(url).hostname;
-  const wordCount = (textContent.match(/[A-Za-z]+/g) || []).length;
-
-  return {
+  return buildArticleFromText({
     url,
     title,
-    siteName,
+    siteName: parsed?.siteName || getHostnameFromUrl(url),
     text: textContent,
-    paragraphs,
-    wordCount,
-    loadedAt: new Date().toISOString(),
-  };
+    loadMode: 'proxy',
+  });
+}
+
+function buildArticleFromManual(title, text, sourceUrl = '') {
+  if (!text || text.trim().length < 120) {
+    throw createLoadError('手动正文内容太少，请至少粘贴一段完整文章。', 'MANUAL_TOO_SHORT');
+  }
+
+  return buildArticleFromText({
+    url: sourceUrl,
+    title: title || '手动粘贴文章',
+    siteName: '手动粘贴',
+    text,
+    loadMode: 'manual',
+  });
+}
+
+async function fetchArticleViaBridge(url, endpoint) {
+  if (!endpoint) {
+    throw createLoadError('请填写本地桥接 Endpoint。', 'BRIDGE_ENDPOINT_MISSING');
+  }
+
+  let normalizedEndpoint = endpoint;
+  try {
+    normalizedEndpoint = new URL(endpoint).toString();
+  } catch {
+    throw createLoadError('本地桥接 Endpoint 格式不正确。', 'BRIDGE_ENDPOINT_INVALID');
+  }
+
+  let response;
+  try {
+    response = await fetch(normalizedEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    });
+  } catch (error) {
+    throw createLoadError(
+      `无法连接本地桥接服务：${error.message || 'network error'}`,
+      'BRIDGE_OFFLINE',
+      '请先在本机运行 Playwright 桥接脚本，再重新加载。'
+    );
+  }
+
+  if (!response.ok) {
+    const raw = await response.text();
+    throw createLoadError(`本地桥接接口失败（${response.status}）：${raw.slice(0, 150)}`, 'BRIDGE_HTTP_ERROR');
+  }
+
+  const payload = await response.json();
+  if (!payload || typeof payload.text !== 'string') {
+    throw createLoadError('本地桥接返回格式错误，缺少 text 字段。', 'BRIDGE_PAYLOAD_INVALID');
+  }
+
+  return buildArticleFromText({
+    url: payload.url || url,
+    title: payload.title || getHostnameFromUrl(url),
+    siteName: payload.siteName || getHostnameFromUrl(url),
+    text: payload.text,
+    loadMode: 'bridge',
+  });
 }
 
 function shrinkText(text, max = 120) {
@@ -610,28 +813,66 @@ function saveSession() {
 }
 
 async function handleLoadArticle() {
+  const mode = getLoadMode();
+  state.loadMode = mode;
   const url = articleUrlInput.value.trim();
-  if (!url) {
+  let normalizedUrl = '';
+
+  if (mode !== 'manual' && !url) {
     setStatus('请输入文章链接。', 'error');
     return;
   }
 
-  let normalizedUrl = url;
-  try {
-    normalizedUrl = new URL(url).toString();
-  } catch {
-    setStatus('链接格式不正确。', 'error');
-    return;
+  if (url && mode !== 'manual') {
+    try {
+      normalizedUrl = new URL(url).toString();
+    } catch {
+      setStatus('链接格式不正确。', 'error');
+      return;
+    }
+  } else if (url && mode === 'manual') {
+    try {
+      normalizedUrl = new URL(url).toString();
+    } catch {
+      normalizedUrl = '';
+    }
   }
 
   loadArticleBtn.disabled = true;
-  setStatus('正在抓取并解析文章，请稍等...');
+  setStatus(
+    mode === 'manual'
+      ? '正在载入手动粘贴内容...'
+      : mode === 'bridge'
+        ? '正在通过本地桥接抓取文章...'
+        : '正在通过代理抓取并解析文章...'
+  );
+  setParseHint(DEFAULT_PARSE_HINT);
 
   try {
-    state.article = await fetchArticle(normalizedUrl);
+    if (mode === 'manual') {
+      state.article = buildArticleFromManual(manualTitleInput.value.trim(), manualTextInput.value, normalizedUrl);
+      setParseHint('已使用手动粘贴模式加载正文。', 'success');
+      setStatus('手动内容加载成功。你可以开始查词和总结。', 'ok');
+    } else if (mode === 'bridge') {
+      state.article = await fetchArticleViaBridge(normalizedUrl, bridgeEndpointInput.value.trim());
+      setParseHint('已通过本地桥接模式加载正文。', 'success');
+      setStatus('本地桥接解析成功。你可以点击单词查词。', 'ok');
+    } else {
+      state.article = await fetchArticleViaProxy(normalizedUrl);
+      setParseHint('代理解析成功。遇到受限站点时可切换到“手动粘贴”或“本地桥接”。', 'success');
+      setStatus('文章解析成功。你可以点击单词查词。', 'ok');
+    }
+
     renderArticle();
-    setStatus('文章解析成功。你可以点击单词查词。', 'ok');
+    persist();
   } catch (error) {
+    if (error.hint) {
+      setParseHint(error.hint, 'warning');
+    } else if (error.code === 'PAYWALL_OR_GATE') {
+      setParseHint('当前链接受登录/付费墙限制，请切换到“手动粘贴”或“本地桥接”模式。', 'warning');
+    } else {
+      setParseHint(DEFAULT_PARSE_HINT);
+    }
     setStatus(error.message || '文章解析失败。', 'error');
   } finally {
     loadArticleBtn.disabled = false;
@@ -640,6 +881,13 @@ async function handleLoadArticle() {
 
 function bindEvents() {
   loadArticleBtn.addEventListener('click', handleLoadArticle);
+  loadModeInputs.forEach((input) => {
+    input.addEventListener('change', () => {
+      setLoadMode(input.value);
+      setParseHint(DEFAULT_PARSE_HINT);
+      persist();
+    });
+  });
 
   articleUrlInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -651,7 +899,7 @@ function bindEvents() {
   articleUrlInput.addEventListener('paste', () => {
     setTimeout(() => {
       const text = articleUrlInput.value.trim();
-      if (/^https?:\/\//i.test(text)) {
+      if (getLoadMode() !== 'manual' && /^https?:\/\//i.test(text)) {
         handleLoadArticle();
       }
     }, 80);
@@ -766,10 +1014,13 @@ function bindEvents() {
 
   aiEndpointInput.addEventListener('change', persist);
   aiModelInput.addEventListener('change', persist);
+  bridgeEndpointInput.addEventListener('change', persist);
 }
 
 function init() {
   loadPersistedState();
+  setLoadMode(state.loadMode);
+  setParseHint(DEFAULT_PARSE_HINT);
   renderArticle();
   renderFavorites();
   renderVocab();
